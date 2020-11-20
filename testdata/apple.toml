@@ -1,0 +1,14 @@
+[stock]
+name = "Apple"
+symbol = "AAPL"
+isin = "US0378331005"
+
+[[transaction]]
+date = 2015-08-14
+amount = -2899
+shares = -100
+
+[[transaction]]
+date = 2017-12-01
+amount = -5986.40
+shares = -140
