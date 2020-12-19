@@ -25,25 +25,25 @@ func BuildPortfolio(stocks []*Stock) Portfolio {
 type Portfolio map[*Stock]*PortfolioStock
 
 func (p Portfolio) Invested() decimal.Decimal {
-	buy := decimal.Zero
-	for _, pa := range p {
-		buy = buy.Add(pa.Invested())
+	invested := decimal.Zero
+	for _, ps := range p {
+		invested = invested.Add(ps.Invested())
 	}
-	return buy
+	return invested
 }
 
 func (p Portfolio) RealizedProfit() decimal.Decimal {
 	realizedProfit := decimal.Zero
-	for _, pa := range p {
-		realizedProfit = realizedProfit.Add(pa.RealizedProfit)
+	for _, ps := range p {
+		realizedProfit = realizedProfit.Add(ps.RealizedProfit)
 	}
 	return realizedProfit
 }
 
 func (p Portfolio) Dividends() decimal.Decimal {
 	dividends := decimal.Zero
-	for _, pa := range p {
-		dividends = dividends.Add(pa.Dividends)
+	for _, ps := range p {
+		dividends = dividends.Add(ps.Dividends)
 	}
 	return dividends
 }
@@ -102,11 +102,11 @@ func (ps *PortfolioStock) Shares() decimal.Decimal {
 }
 
 func (ps *PortfolioStock) Invested() decimal.Decimal {
-	buy := decimal.Zero
+	invested := decimal.Zero
 	for _, b := range ps.Batches {
-		buy = buy.Add(b.Invested())
+		invested = invested.Add(b.Invested())
 	}
-	return buy
+	return invested
 }
 
 func (ps *PortfolioStock) PricePerShare() decimal.Decimal {
@@ -130,7 +130,7 @@ func (ps *PortfolioStock) AddShares(t *Transaction) {
 func (ps *PortfolioStock) RemoveShares(t *Transaction) (float64, decimal.Decimal) {
 	var (
 		toRemove = t.Shares
-		bought   = decimal.Zero
+		invested   = decimal.Zero
 	)
 
 outer:
@@ -146,10 +146,10 @@ outer:
 
 			if toRemove.GreaterThanOrEqual(b.Shares) {
 				toRemove = toRemove.Sub(b.Shares)
-				bought = bought.Add(b.Shares.Mul(b.PricePerShare)) // TODO name
+				invested = invested.Add(b.Shares.Mul(b.PricePerShare))
 				ps.Batches = append(ps.Batches[0:i], ps.Batches[i+1:]...)
 			} else {
-				bought = bought.Add(b.PricePerShare.Mul(toRemove))
+				invested = invested.Add(b.PricePerShare.Mul(toRemove))
 				ps.Batches[i].Shares = ps.Batches[i].Shares.Sub(toRemove)
 				ps.Batches[i].Transactions = append(ps.Batches[i].Transactions, &Transaction{
 					Date:   t.Date,
@@ -167,20 +167,14 @@ outer:
 		panic("PortfolioStock.RemoveShares: no batches left")
 	}
 
-	ret, _ := t.Amount.Div(bought).Sub(decimal.New(1, 0)).Float64()
-	profit := t.Amount.Sub(bought)
+	profit := t.Amount.Sub(invested)
 	ps.RealizedProfit = ps.RealizedProfit.Add(profit)
-	return ret, profit
+	return Return(invested, t.Amount), profit, nil
 }
 
 func (ps *PortfolioStock) AddDividend(t *Transaction) float64 {
 	ps.Dividends = ps.Dividends.Add(t.Amount)
-	buy := ps.Invested()
-	if buy.IsZero() {
-		return 0
-	}
-	ret, _ := t.Amount.Div(buy).Float64()
-	return ret
+	return Return(ps.Invested(), t.Amount)
 }
 
 type PortfolioStockBatch struct {
