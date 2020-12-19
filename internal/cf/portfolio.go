@@ -1,6 +1,7 @@
 package cf
 
 import (
+	"errors"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -57,18 +58,18 @@ func (p Portfolio) AddShares(s *Stock, t *Transaction) {
 	ps.AddShares(t)
 }
 
-func (p Portfolio) RemoveShares(s *Stock, t *Transaction) (float64, decimal.Decimal) {
+func (p Portfolio) RemoveShares(s *Stock, t *Transaction) (float64, decimal.Decimal, error) {
 	if p[s] == nil {
-		panic("Portfolio.RemoveShares: not in portfolio")
+		return 0, decimal.Zero, errors.New("cf: stock not in portfolio")
 	}
 	return p[s].RemoveShares(t)
 }
 
-func (p Portfolio) AddDividend(s *Stock, t *Transaction) float64 {
+func (p Portfolio) AddDividend(s *Stock, t *Transaction) (float64, error) {
 	if p[s] == nil {
-		panic("Portfolio.AddDividend: not in portfolio")
+		return 0, errors.New("cf: stock not in portfolio")
 	}
-	return p[s].AddDividend(t)
+	return p[s].AddDividend(t), nil
 }
 
 func (p Portfolio) Clone() Portfolio {
@@ -127,7 +128,7 @@ func (ps *PortfolioStock) AddShares(t *Transaction) {
 	})
 }
 
-func (ps *PortfolioStock) RemoveShares(t *Transaction) (float64, decimal.Decimal) {
+func (ps *PortfolioStock) RemoveShares(t *Transaction) (float64, decimal.Decimal, error) {
 	var (
 		toRemove = t.Shares
 		invested   = decimal.Zero
@@ -136,7 +137,7 @@ func (ps *PortfolioStock) RemoveShares(t *Transaction) (float64, decimal.Decimal
 outer:
 	for toRemove.IsPositive() {
 		if len(ps.Batches) == 0 {
-			panic("PortfolioStock.RemoveShares: no batches left")
+			return 0, decimal.Zero, errors.New("cf: invalid transaction: no batches left")
 		}
 
 		for i, b := range ps.Batches {
@@ -164,7 +165,7 @@ outer:
 			continue outer
 		}
 
-		panic("PortfolioStock.RemoveShares: no batches left")
+		return 0, decimal.Zero, errors.New("cf: invalid transaction: no batches left")
 	}
 
 	profit := t.Amount.Sub(invested)

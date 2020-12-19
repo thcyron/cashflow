@@ -90,7 +90,10 @@ func (s *Server) stockHandler(ctx context.Context, w http.ResponseWriter, r *htt
 		return nil
 	}
 
-	transactions, stats := cf.CalculateStats([]*cf.Stock{stock})
+	transactions, stats, err := cf.CalculateStats([]*cf.Stock{stock})
+	if err != nil {
+		return err
+	}
 
 	encodedTransactions := []Transaction{}
 	for _, transaction := range stock.Transactions {
@@ -108,7 +111,10 @@ func (s *Server) stockHandler(ctx context.Context, w http.ResponseWriter, r *htt
 			value    = s.priceFunc(stock, time.Now()).Mul(batch.Shares)
 		)
 
-		batchStats := batch.Transactions.Stats()
+		batchStats, err := batch.Transactions.Stats()
+		if err != nil {
+			return err
+		}
 		batchPerformances := cf.CalculatePerformances(ctx, s.priceFunc, batch.Transactions, batchStats)
 
 		batches = append(batches, stockResponseBatch{

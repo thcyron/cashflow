@@ -28,7 +28,7 @@ type SellStats struct {
 	PricePerShare decimal.Decimal
 }
 
-func CalculateStats(stocks []*Stock) (Transactions, map[*Transaction]Stats) {
+func CalculateStats(stocks []*Stock) (Transactions, map[*Transaction]Stats, error) {
 	type stockTransaction struct {
 		stock *Stock
 		tx    *Transaction
@@ -64,7 +64,11 @@ func CalculateStats(stocks []*Stock) (Transactions, map[*Transaction]Stats) {
 
 		if st.tx.Shares.IsPositive() {
 			// Sell
-			s.Sell.Return, s.Sell.Profit = s.Portfolio.RemoveShares(st.stock, st.tx)
+			ret, profit, err := s.Portfolio.RemoveShares(st.stock, st.tx)
+			if err != nil {
+				return nil, nil, err
+			}
+			s.Sell.Return, s.Sell.Profit = ret, profit
 			s.Sell.PricePerShare = st.tx.Amount.Div(st.tx.Shares)
 		} else if st.tx.Shares.IsNegative() {
 			// Buy
@@ -72,11 +76,15 @@ func CalculateStats(stocks []*Stock) (Transactions, map[*Transaction]Stats) {
 			s.Buy.PricePerShare = st.tx.Amount.Div(st.tx.Shares)
 		} else {
 			// Dividend
-			s.Dividend.Return = s.Portfolio.AddDividend(st.stock, st.tx)
+			ret, err := s.Portfolio.AddDividend(st.stock, st.tx)
+			if err != nil {
+				return nil, nil, err
+			}
+			s.Dividend.Return = ret
 		}
 
 		stats[st.tx] = s
 	}
 
-	return transactions, stats
+	return transactions, stats, nil
 }

@@ -40,7 +40,7 @@ func (ts Transactions) Clone() Transactions {
 	return cloned
 }
 
-func (ts Transactions) Stats() map[*Transaction]Stats {
+func (ts Transactions) Stats() (map[*Transaction]Stats, error) {
 	stats := make(map[*Transaction]Stats)
 
 	for i, t := range ts {
@@ -56,7 +56,11 @@ func (ts Transactions) Stats() map[*Transaction]Stats {
 
 		if t.Shares.IsPositive() {
 			// Sell
-			s.Sell.Return, s.Sell.Profit = s.Portfolio.RemoveShares(t.Stock, t)
+			ret, profit, err := s.Portfolio.RemoveShares(t.Stock, t)
+			if err != nil {
+				return nil, err
+			}
+			s.Sell.Return, s.Sell.Profit = ret, profit
 			s.Sell.PricePerShare = t.Amount.Div(t.Shares)
 		} else if t.Shares.IsNegative() {
 			// Buy
@@ -64,11 +68,15 @@ func (ts Transactions) Stats() map[*Transaction]Stats {
 			s.Buy.PricePerShare = t.Amount.Div(t.Shares)
 		} else {
 			// Dividend
-			s.Dividend.Return = s.Portfolio.AddDividend(t.Stock, t)
+			ret, err := s.Portfolio.AddDividend(t.Stock, t)
+			if err != nil {
+				return nil, err
+			}
+			s.Dividend.Return = ret
 		}
 
 		stats[t] = s
 	}
 
-	return stats
+	return stats, nil
 }

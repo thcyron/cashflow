@@ -123,7 +123,10 @@ func (s *Server) portfolioHandler(ctx context.Context, w http.ResponseWriter, r 
 		}
 	}
 
-	transactions, stats := cf.CalculateStats(stocks)
+	transactions, stats, err := cf.CalculateStats(stocks)
+	if err != nil {
+		return err
+	}
 
 	portfolio := cf.BuildPortfolio(stocks)
 	performances := cf.CalculatePerformances(ctx, s.priceFunc, transactions, stats)
@@ -138,7 +141,11 @@ func (s *Server) portfolioHandler(ctx context.Context, w http.ResponseWriter, r 
 		if portfolioStock.Shares().IsPositive() {
 			encodedPortfolioStock := EncodePortfolioStock(stock, portfolioStock)
 
-			stockTransactions, stockStats := cf.CalculateStats([]*cf.Stock{stock})
+			stockTransactions, stockStats, err := cf.CalculateStats([]*cf.Stock{stock})
+			if err != nil {
+				return err
+			}
+
 			performances := cf.CalculatePerformances(ctx, s.priceFunc, stockTransactions, stockStats)
 			encodedPortfolioStock.Performances = EncodePerformances(performances)
 
