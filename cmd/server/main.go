@@ -13,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/oklog/run"
 	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/fftoml"
 
 	"github.com/thcyron/cashflow/internal/api"
 	"github.com/thcyron/cashflow/internal/cf"
@@ -32,12 +33,14 @@ func main() {
 		gitURL  = flagSet.String("git.url", "", "Git repository URL")
 		gitUser = flagSet.String("git.user", "git", "Git SSH username")
 		gitKey  = flagSet.String("git.key", "", "Git SSH private key")
+
+		_ = flagSet.String("config", "", "config file (optional)")
 	)
 
 	if err := ff.Parse(flagSet, os.Args[1:],
 		ff.WithEnvVarPrefix("CASHFLOW"),
 		ff.WithConfigFileFlag("config"),
-		ff.WithConfigFileParser(ff.PlainParser),
+		ff.WithConfigFileParser(fftoml.Parser),
 	); err != nil {
 		logger.Log("msg", "error parsing flags", "err", err)
 		os.Exit(1)
